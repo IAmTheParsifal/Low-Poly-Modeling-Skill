@@ -57,6 +57,34 @@ exec(open("scripts/compare.py").read())              # after setting REFS
 Each harness has its config at the top: `OBJECT`, `OUT`, and for `compare.py` a `REFS` list
 of reference models to scale and line up against the build.
 
+## What it produces
+
+Renders taken during development of the character this skill was written on — all clay,
+all straight out of `preview.py`, no retouching. That is the point: a build is judged on
+silhouette and where the surfaces meet, not on surface detail.
+
+| | |
+|---|---|
+| ![T-pose front](images/body_front.png) | ![three-quarter](images/body_q34.png) |
+| Front, 1.72 m, T-pose, 1127 v / 2228 tris | Three-quarter view |
+| ![profile](images/body_side.png) | ![head](images/head_q34.png) |
+| Profile — silhouette and hair mass | Head: smooth skull, faceted mane, stitched neck |
+| ![hand](images/hand_q34.png) | |
+| Welded hand: 4 fingers of 3 segments extruded off the knuckle ring, thumb out of the palm's own wall quad | |
+
+## Future plans
+
+- **Geometry correction** — tighten the remaining stitch seams (shoulder cap, crotch
+  triangles) and give the face modelled eye sockets so painted features have something to
+  sit in.
+- **Animating** — a skeleton on the welded surface: shoulders, hips and wrists now share
+  edges with the torso, which is what makes that possible without tearing.
+- **Texturing** — one 256²/512² atlas: painted face, dark inner-hair region so the mane's
+  facets read as depth, and the clothes as paint over the same mesh.
+- **UV map correction** — replace the `smart_project` placeholder with a real layout: one
+  island per stitched band, no overlapping shells, seams placed where the texture hides
+  them.
+
 ## The conventions it enforces
 
 +Z up · character faces −Y · feet on Z=0 · metres · one object · one material · one
