@@ -6,8 +6,14 @@ Run from the repo root inside Blender:
     exec(open("examples/minimal_character.py").read())
 
 Every shape is a table of numbers. Change a number, re-run, look at the render — that is
-the whole loop. The shells overlap at the hips and shoulders here; accepting that is fine
-for a blockout, but a finished asset hides those crossings (see the traps in SKILL.md).
+the whole loop.
+
+This is a **blockout**: the shells are capped and pushed into each other, because
+proportions come first and topology second. The finished asset welds those joints into a
+single surface — cut a shoulder socket and bridge the arm's first ring into it, split the
+pelvis rim into the two legs, extrude the fingers off the palm's own vertices. See "One
+surface, not a bag of parts" in SKILL.md. Leaving shells butted and hiding the crossing
+under a garment is exactly what reads as amateur in a close-up.
 """
 import sys
 

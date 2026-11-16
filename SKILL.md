@@ -1,6 +1,6 @@
 ---
 name: ps1-modeling
-description: "Use when modeling, refining or reviewing a PS1/PSX-style low-poly character or prop in Blender — a retro game asset, a low-poly portrait from a turnaround reference, a faceted-hair game mesh, or anything that has to match the poly budget and conventions of PlayStation 1 assets. Covers the procedural build-script workflow, the loft library, measuring a reference for proportions, budgets, and the failure modes that cost the most time."
+description: "Use when modeling, refining or reviewing a PS1/PSX-style low-poly character or prop in Blender — a retro game asset, a low-poly portrait from a turnaround reference, a faceted-hair game mesh, anything that has to match the poly budget and conventions of PlayStation 1 assets, or any low-poly body that has to be welded into one surface at the shoulders, hips, wrists and neck. Covers the procedural build-script workflow, the loft/bridge library, measuring a reference for proportions, budgets, and the failure modes that cost the most time."
 ---
 
 # PS1 / PSX low-poly modeling
@@ -19,8 +19,10 @@ on silhouette and edge flow — never on surface detail.
   separate garment objects.
 - 100% smooth shading, except hair and hard-surface props.
 - No normal maps, no PBR, no shape keys.
-- No loose vertices, no loose edges, no zero-area faces, no non-manifold garbage.
-- Quads for body shells, triangles only where a shape needs them (tips, caps).
+- One connected surface for the body: no loose vertices, no loose edges, no zero-area
+  faces, no non-manifold edges, no coincident vertices. Quads for shells, triangles only
+  where a shape needs them (joint bands, tips).
+- A T-pose body at rest, so the joints can be welded cleanly and a rig has room.
 
 Budgets from three shipped reference models:
 
@@ -31,15 +33,15 @@ Budgets from three shipped reference models:
 | LE0GAR | 548 | 943 | 9 objects, one 256² atlas, Rigify, 2.4 m |
 
 That is a rigged **bare body**. Hair volume and accessories legitimately push past it — a
-1225 v / 2294 tri character with a full mane, glasses, belt and boots is still a PS1
-character. Never cut silhouette to hit a number derived from a bare body.
+1100 v / 2200 tri character with a full mane, belt and boots is still a PS1 character.
+Never cut silhouette to hit a number derived from a bare body.
 
 ## Setup
 
-`scripts/psx_build.py` is the library; the two harnesses are config-at-the-top scripts.
+`scripts/psx_build.py` is the library; the harnesses are config-at-the-top scripts.
 
 ```
-scripts/psx_build.py           ring / ring_dir / Build / finish / check / report
+scripts/psx_build.py           ring / ring_dir / Build / bridge / finish / check / report
 scripts/preview.py             ortho clay renders, shots derived from the bbox
 scripts/compare.py             stats table + side-by-side against reference FBX/OBJ models
 scripts/measure_silhouette.py  width-vs-height scan of a reference PNG
@@ -51,7 +53,7 @@ Everything runs inside Blender:
 ```python
 import sys
 sys.path.insert(0, r"…/scripts")
-from psx_build import Build, ring, finish
+from psx_build import Build, ring, ring_dir, bridge, finish, check
 ```
 
 ## The API
@@ -66,102 +68,185 @@ bust bulge, lumbar curve or seat is made without adding rings.
 
 ```python
 Build.loft(rings, cap_start=..., cap_end=..., flat=..., part="…")
+Build.extrude(base_indices, [(dir, length, scale), …], part="…")   # welded digit
+Build.add_faces(faces, part="…")          # stitch vertices that already exist
+Build.add(verts, faces, flat=..., part="…")
 Build.tube(path, rx, ry, n=4, e=2.0, caps=True, part="…")
 Build.box(cx, cy, cz, sx, sy, sz, flat=True, part="…")
-Build.add(verts, faces, flat=..., part="…")
-Build.mark() → pass to Build.mirror_x(mark)
+Build.mark() → Build.mirror_x(mark)      # returns the mirrored vertex offset
+bridge(verts, loop_a, loop_b, ref_face)  # stitch two open loops
 ```
-`tube()` takes a path of points and orients each ring along the local tangent — use it for
-chains, fingers and anything swept. `rx`/`ry` may be lists, one per point, for tapering.
 
-```python
-finish(name, *builds, material=..., color=..., uv=True)
-check(ob)    # the gate: loose verts / edges / zero-area faces must be 0
-report(ob)   # verts, faces, tris, bbox, height
-```
-`finish()` merges one or more `Build`s into a single object, applies smooth flags per face,
-makes the material, recalculates normals, adds placeholder UVs and prints the build report.
-It replaces any existing object of the same name, so a build script is safe to re-run.
+`tube()` takes a path and orients each ring along the tangent — good for chains, straps,
+loose props. It builds **its own** rings, so it cannot weld anything: for a digit that
+must be part of a hand, use `extrude()` on vertices that already exist.
+
+`finish()` merges builds into one object, applies smooth flags, welds coincident verts,
+triangulates n-gons, recalculates normals, makes the material, adds placeholder UVs and
+prints the report. `check()` is the gate; `bridge()`'s `ref_face` argument is what keeps
+its winding honest.
+
+## One surface, not a bag of parts
+
+The default low-poly habit is to model each part as its own tube and push them into each
+other. It is fast, and it is wrong in three ways: the crossing surfaces show as a jagged
+seam in close-up, the interior faces are wasted, and every joint tears when it deforms.
+
+Build the body as **one welded surface** instead. Four techniques cover every joint:
+
+1. **Split a rim into limbs (hips, shoulders of a four-legged animal).** The pelvis's
+   lowest ring is not a cap: each leg takes *six of its twelve verts* plus two crotch
+   verts shared by both legs, and the two gaps left (front and back) are one triangle
+   each. The legs then loft from that loop down. Nothing is bridged, nothing overlaps —
+   the hip is simply one surface. Order each leg's loop by angle around its own thigh
+   axis before lofting, or the first band twists.
+2. **Cut a socket and stitch (shoulders, wrists, ankles, neck).** Write the parent's
+   faces out by hand instead of calling `loft()`, skipping the quads where the limb
+   attaches. That leaves an opening whose boundary is a known loop of vertex indices.
+   `bridge(b.v, socket_loop, limb_first_ring, neighbouring_face)` fills it with a band.
+3. **Extrude a welded quad (fingers, thumbs).** Take four existing vertices — four
+   corners of the palm's end ring, or one wall quad left open in the palm — and
+   `extrude()` them. Adjacent digits share their side edge, so the knuckles are one
+   surface with a crease, not tubes in a box.
+4. **Share a ring outright (wrist, ankle).** If both sides are the same vertex count and
+   the same place, use the parent's ring *as* the child's first ring. Costs no geometry.
+
+Two numbers decide whether a stitched joint looks professional:
+
+- **Cut the socket so it matches the limb's cross-section.** A rectangular socket cut
+  from a 12-around grid puts four of its eight verts at the top and four at the bottom,
+  clustered in angle; the stitching band then has nothing to fan evenly between and
+  twists into spikes or a dark pocket. Two quads wide (~90–95 mm on a 1.7 m figure) by
+  one ring band is the width that behaves. Three quads looked worse, not better.
+- **Size the limb's first ring to the socket, not to the limb.** Make it the same
+  ellipse as the opening (e.g. 94 × 38 mm), then swell to the real deltoid one or two
+  rings later. A full-size circular ring stitched into a shallow slot has to fan 30 mm in
+  every direction and folds. Place it *at* the socket's plane: inside the parent gives a
+  pocket that holds shadow, outside gives spikes.
 
 ## Workflow
 
 1. **Measure the reference before modelling.** Run `scripts/measure_silhouette.py` on the
-   turnaround: it prints silhouette width at every 3% of height. Write the table down.
-   Eyeballing proportions is the single biggest source of rounds lost — a waist 2 cm off
-   does not read as "slightly wrong", it reads as a different character.
-2. **Block with lofts.** One `Build`, parts in order: torso → legs → feet → arms → hands →
-   mirror → head → hair → accessories. Read the printed PARTS log after every build; it
-   tells you which part is eating polys.
-3. **Render clay, not shaded.** `preview.py`, grey background, no textures. Judge only
-   silhouette and the shading break where surfaces meet.
-4. **Compare against reference models**, not just the image. `compare.py` scales everything
-   to one height and prints verts/tris side by side. It catches short arms and flat depth
-   faster than looking.
-5. **Gate.** `check()` clean, feet on Z=0, tri count in budget.
-6. **Save a copy.** `bpy.ops.wm.save_as_mainfile(filepath=…, copy=True)` writes the file
-   without hijacking the session's current filepath.
+   turnaround; write the width-at-height table down. Eyeballing proportions is the single
+   biggest source of rounds lost.
+2. **Block with lofts, then weld.** Torso grid first (its face list is hand-written so
+   sockets can be cut), then pelvis split → legs → feet, sockets → arms → hands, neck →
+   head. Read the printed PARTS log after every build.
+3. **Render clay, and render close-ups of every joint.** Full-body ortho hides joints
+   completely. Shoot each seam at 0.20–0.32 ortho from two angles before believing it.
+4. **Compare against reference models**, not just the image. `compare.py` scales
+   everything to one height and prints verts/tris side by side.
+5. **Audit numerically** (see below), then save a copy.
 
-## Traps — each one of these cost at least one round trip
+## Verifying a weld
 
-1. **Separate shells always cross.** Two lofts of similar radius produce a jagged seam
-   wherever their surfaces intersect, and no amount of tweaking hides it. Let the *outer
-   garment* own the joint: the trousers form the hips, the torso tapers to a small cap
-   buried inside them, and the crossover hides under the belt (belt wider than the body).
-   Same trick at arm→shoulder and trouser-hem→boot.
-2. **A cap that pokes out reads as a torn edge.** A cap sharing a Z with another shell
-   makes a visible jagged ring. Keep caps strictly inside the other shell, or don't cap.
-3. **Fill the crotch.** Two overlapping leg tubes leave a deep valley at x=0. Bridge it
-   with a narrow torso cone whose front is level with the trousers. Too thin and you get a
-   black groove; too wide and you get a diaper.
-4. **Hair: don't cut the face slot out of the shell.** For each row, columns inside the slot
-   get a radial scale around 0.45 plus a small +Y push, ramping to full radius roughly 10°
-   past the slot half-angle (26–34° by row). The quad leaving the head then leaves at the
-   cheek instead of across the face. A 30° ramp puts hair over the whole face; shrink
-   without the push leaves a big pale inner wall beside the cheek.
-5. **Never alternate a fringe hem by column parity.** `j % 2` on an even column count puts
-   a deep tooth notch dead centre. Use a smooth function of the column angle.
-6. **Hair is a closed lofted volume, not cards** — e.g. 20 columns × 11 rows, flat-shaded,
-   with per-vertex wobble for the chopped look. Sweep the lower rows backwards or the
-   profile reads as a hood.
-7. **Chains float.** Keep a necklace arc within a few millimetres of the chest surface or
-   it reads as wire hanging in space in three-quarter views.
-8. **Normalise every direction vector** before scaling by a length. An unnormalised one
-   produced a 1 m thumb.
-9. **`mirror_x` takes `(len(v), len(f))` from `mark()`**, and mirrored faces need reversed
-   winding. Passing vertex indices corrupts the mesh silently.
-10. **Never `join()` without deselecting all first.** A leftover default cube gets absorbed
-    into the character. Filter selection by object name.
-11. **Reference FBX imports** need `parent_clear(type="CLEAR_KEEP_TRANSFORM")` *before* the
-    armature is deleted — rigs are commonly 0.01 scale with a 100-scale mesh parented to
-    them. Then apply transforms and centre on the **bbox centre**, not the bbox min, or the
-    models never line up.
-12. **Elevated preview cameras**: the horizontal offset must scale by `cos(elev)`, or the
-    shot frames empty background.
-13. **Run the gate on geometry, not on the render.** A degenerate quad can look fine in a
-    front view and wreck the wireframe. `check()` exists for that.
-
-## Review pass
-
-`preview.py` gives four full-body views plus two close-ups, all derived from the object's
-bbox. Look for: jagged shell crossings, caps showing as flat ledges, the crotch, garment
-junctions, whether the hair profile is hair or a hood, whether the face slot is clear.
-
-Final gate:
+"It looks attached" is not evidence. Count:
 
 ```python
 from psx_build import check
-check(ob)   # loose verts, loose edges, zero-area faces → all 0
+check(ob)                 # closed body: every count 0, boundary 0
+check(ob, boundary=32)    # when you ship single-sided decals on purpose
 ```
-plus: bbox `z.min == 0`, height, tri count, smooth flags correct.
+
+`boundary` is the number of edges with only one face. A closed body is 0. This is the
+test that catches the expensive bug: a digit whose base ring was *copied* instead of
+shared looks welded in a render and shows up here as four boundary edges per digit.
+
+Also worth printing once per session:
+
+```python
+bm = bmesh.new(); bm.from_mesh(me)          # after bm.from_mesh:
+len(bm.verts) - len({tuple(round(c, 5) for c in v.co) for v in bm.verts})   # coincident
+sum(1 for f in bm.faces if len(f.verts) > 4)                                # n-gons
+# symmetry: every vert with |x| > 0 should have a partner at -x
+```
+
+Check symmetry **globally**, not per part: a mirrored part has no partner inside itself,
+so a per-part check reports 100 % asymmetric for a perfectly symmetric model. Hair is the
+one part that should be allowed to be asymmetric — an identical mirror looks like a wig.
+
+## Traps — each one of these cost at least one round trip
+
+1. **A copied base ring is not a weld.** `tube()`/`ring_dir()` build new vertices, so
+   feeding them a digit's four corner *coordinates* silently duplicates the ring. The
+   digit renders as attached, `boundary` is nonzero, and a whole review pass can be spent
+   polishing a joint that does not exist. Pass indices; use `extrude()`.
+2. **Decide a seam's winding from a neighbouring face, not from a normal vote.** For a
+   band that wraps a limb the face normals sum to about zero, so an inward/outward vote
+   is noise and half the band ends up inverted. A seam edge must be walked in opposite
+   directions by the two faces that share it — that is one comparison, and it is exact.
+3. **Rings of different counts need `bridge()`; same counts do not need anything.** Two
+   8-vert loops at the same place can simply share vertices. Reaching for a stitch band
+   where a shared ring would do adds triangles and a visible crease.
+4. **Radii at a stitched junction must be monotonic.** Neck thinner than the skull's
+   opening, opening wider than the neck: if the surface goes out→in→out, the groove
+   catches shadow and reads as a crack across the throat. Same rule under a jaw, a cuff,
+   a boot top.
+5. **Keep the head and its accessories in one register.** Put the head's vertical offset
+   in a single constant (`HEAD_DZ`) and apply it to skull, nose, eyes and hair together.
+   Moving "the head" by editing the skull table alone leaves the fringe floating.
+6. **Hair: don't cut the face slot out of the shell.** For each row, columns inside the
+   slot get a radial scale around 0.45 plus a small +Y push, ramping to full radius
+   roughly 10° past the slot half-angle (26–34° by row). A 30° ramp puts hair over the
+   whole face; shrink without the push leaves a pale inner wall beside the cheek.
+7. **Never alternate a fringe hem by column parity.** `j % 2` on an even column count
+   puts a tooth notch dead centre. Use a smooth function of the column angle.
+8. **A single-apex pyramid is not a nose.** Read as a thin sliver from the front. Use a
+   six-vertex wedge with a separate bridge point and tip point, base closed so the head
+   stays watertight.
+9. **Frame the whole pose.** A T-pose spans about the character's height; an ortho scale
+   that frames the torso crops the hands off and hides every hand problem. Set the render
+   width from the bbox, not from habit.
+10. **Normalise every direction vector** before scaling by a length. An unnormalised one
+    produced a 1 m thumb.
+11. **`mirror_x` takes `(len(v), len(f))` from `mark()`**, reverses the mirrored winding,
+    and returns the copy's vertex offset — keep its return value if you want to stitch a
+    seam to the mirrored limb.
+12. **Never `join()` without deselecting all first.** A leftover default cube gets
+    absorbed into the character. Filter selection by object name.
+13. **Reference FBX imports**: read posed bones from the evaluated depsgraph
+    (`ob.evaluated_get(dg).pose.bones[name]`), not rest-pose `bone.head_local` — rigs
+    ship in an A-pose and the rest positions are metres away from what you see. Clear
+    parents before deleting an armature, and delete the imported objects afterwards:
+    a leftover reference model renders into your previews for the rest of the session.
+14. **Elevated preview cameras**: the horizontal offset must scale by `cos(elev)`, or the
+    shot frames empty background.
+15. **Run the gate on geometry, not on the render.** A degenerate quad looks fine in a
+    front view and wrecks the wireframe.
+
+## Review pass
+
+Render, then look, in this order:
+
+- **Close-ups first** — every seam at 0.20–0.32 ortho, two angles each. Joints are where
+  the errors are; a full-body shot at 1.86 ortho cannot show a 10 mm fold.
+- Body front / side / back / three-quarter at an ortho scale that fits the whole pose.
+- Hand and head separately, against the reference art at matched scale.
+- Wireframe or `check()` output next to every render pass.
+
+Then the numbers: `check()` clean, `z.min == 0`, height, tri count, smooth flags, one
+material, UVs inside 0–1, object transform identity.
 
 ## Worked example — one real character
 
-A 1.744 m gothic girl, T-pose, mesh only, built with this library: 1225 verts / 1079 faces
-/ 2294 tris, 26 n-gons (caps), 4 triangles, everything else quads; feet at 0; one material,
-one placeholder UV map.
+A 1.72 m gothic girl, T-pose, mesh only, built and welded with this library:
+**1127 verts / 1223 faces / 2228 tris — 1003 quads, 225 tris, 0 n-gons, 0 boundary
+edges, 0 non-manifold edges, 0 coincident verts.** Torso, pelvis, both legs, both boots,
+both arms, both hands, neck and head are one closed shell; the mane is a second closed
+shell.
 
-Measured widths from its reference sheet (z → silhouette width in metres), which is what
-the body tables were built from:
+What the welding pass changed, in the order it was done:
+
+| joint | before | after |
+|---|---|---|
+| shoulders | arm tube butted into the chest | 2-quad socket cut in the armpit band, arm stitched in |
+| wrists | hand ended inside the forearm | arm's wrist ring stitched to the hand's 10-vert ring |
+| hips | torso stub buried in the trouser tubes | pelvis rim split six-and-six, crotch = 2 shared verts + 2 triangles |
+| ankles | hem over a separate boot | hem stitched to the boot's shaft ring |
+| neck | head floating in the neck tube | neck rim stitched to the skull's lowest ring |
+| fingers | capped tubes pushed into the palm | 3-segment `extrude()` off the knuckle ring |
+
+Measured widths from its reference sheet (z → silhouette width in metres):
 
 | z | width | | z | width |
 |---|---|---|---|---|
@@ -172,14 +257,17 @@ the body tables were built from:
 | 1.225 | 0.265 | | 0.26 | 0.452 |
 | 1.14 | 0.180 | | 0.0525 | 0.449 |
 
-The numbers matter less than the method: one table, one pass of lofts, then numeric
-corrections driven by renders. In that build, arm length was the one thing that needed the
-reference *models* rather than the image — the image's arms droop ~20°, so its horizontal
-span (1.457 m) understates the true arm length. Compare against a T-posed reference model
-for anything measured at an angle.
+The numbers matter less than the method: one table, one pass of lofts, one welding pass,
+then numeric corrections driven by close-up renders. Two things needed the reference
+*models* rather than the image: arm length (the image's arms droop ~20°, so its horizontal
+span understates the true length) and hand size (the image's hand is 154 mm wrist-to-tip
+on a 1.74 m figure; a reference rig with finger bones gave 3 phalanges per finger and
+~168 mm, which is what the model uses).
 
 ## Out of scope here
 
 Texturing, rigging and export. Placeholder UVs from `smart_project` are islands, not a
-real atlas. When texturing starts: one 256² or 512² atlas, keep hair's inner surfaces on a
-dark region so the shell edges read as depth, and paint the face — the mesh stays a mask.
+real atlas. When texturing starts: one 256² or 512² atlas, keep the hair's inner surfaces
+on a dark region so the shell edges read as depth, and paint the face — the mesh stays a
+mask. A welded surface is what makes the later rig survive; a bag of intersecting shells
+is what makes it tear.
