@@ -22,7 +22,10 @@ on silhouette and edge flow — never on surface detail.
 - One connected surface for the body: no loose vertices, no loose edges, no zero-area
   faces, no non-manifold edges, no coincident vertices. Quads for shells, triangles only
   where a shape needs them (joint bands, tips).
-- A T-pose body at rest, so the joints can be welded cleanly and a rig has room.
+- **Build** in a T-pose — level rings make every cut and weld trivial — then **pose the
+  finished, welded mesh** before saving: a rigid per-ring drop of the arms (35° about the
+  shoulder socket, ramped along the arm) and a rigid hand turn about the wrist seam (25°).
+  Every reference ships A-pose at rest, and a T-pose base reads as an unshipped blockout.
 
 Budgets from five reference models:
 
@@ -205,9 +208,10 @@ one part that should be allowed to be asymmetric — an identical mirror looks l
 8. **A single-apex pyramid is not a nose.** Read as a thin sliver from the front. Use a
    six-vertex wedge with a separate bridge point and tip point, base closed so the head
    stays watertight.
-9. **Frame the whole pose.** A T-pose spans about the character's height; an ortho scale
+9. **Frame the whole pose.** A wide pose spans about the character's height; an ortho scale
    that frames the torso crops the hands off and hides every hand problem. Set the render
-   width from the bbox, not from habit.
+   width from the bbox, not from habit — and re-frame after posing, because the bounds
+   move (1.86 ortho for the T-pose became 1.80 at 820 × 900 for the A-pose).
 10. **Normalise every direction vector** before scaling by a length. An unnormalised one
     produced a 1 m thumb.
 11. **`mirror_x` takes `(len(v), len(f))` from `mark()`**, reverses the mirrored winding,
@@ -224,13 +228,28 @@ one part that should be allowed to be asymmetric — an identical mirror looks l
     shot frames empty background.
 15. **Run the gate on geometry, not on the render.** A degenerate quad looks fine in a
     front view and wrecks the wireframe.
+16. **Pose the welded mesh, don't model it posed.** Build level (easy cuts, easy welds),
+    then rotate the finished blocks: an arm drop whose angle ramps along x, plus a rigid
+    hand turn about the wrist seam. Limb rings lie in planes of constant x, so a per-ring
+    angle cannot pinch a loop — the stitch bands take the rest, and mirroring *after*
+    posing gives the other side for free. The wrist break is what makes a hanging hand read
+    as a hand instead of a paddle continuing the forearm.
+17. **Crotch points belong in the cleft.** A rear crotch point sitting several cm forward of
+    the seat closes the buttock with a quad that folds edge-on and renders as a sharp fin
+    on the seat. Put it on the buttock line (y ≈ 0.07, z ≈ 0.89, front point mirrored in y)
+    and the seat closes with a small triangle instead.
+18. **Never let a temp study scene stay active.** A ref-study run that died between
+    `scenes.new()` and its cleanup left that scene active; the next build landed in it —
+    no lights, no camera — and a render pass came out black. Tear temp scenes down in a
+    `finally` at the call site, no global `orphans_purge`, and check the live scene's
+    object list afterwards.
 
 ## Review pass
 
 Render, then look, in this order:
 
 - **Close-ups first** — every seam at 0.20–0.32 ortho, two angles each. Joints are where
-  the errors are; a full-body shot at 1.86 ortho cannot show a 10 mm fold.
+  the errors are; a full-body shot at 1.80 ortho cannot show a 10 mm fold.
 - Body front / side / back / three-quarter at an ortho scale that fits the whole pose.
 - Hand and head separately, against the reference art at matched scale.
 - Wireframe or `check()` output next to every render pass.
@@ -240,8 +259,9 @@ material, UVs inside 0–1, object transform identity.
 
 ## Worked example — one real character
 
-A 1.72 m gothic girl, T-pose, mesh only, built and welded with this library:
-**1127 verts / 1223 faces / 2228 tris — 1003 quads, 225 tris, 0 n-gons, 0 boundary
+A 1.72 m gothic girl, mesh only, built and welded with this library in T-pose, then posed
+to A-pose (35° arm drop, 25° wrist break) after the last weld:
+**1127 verts / 1223 faces / 2228 tris — 1005 quads, 218 tris, 0 n-gons, 0 boundary
 edges, 0 non-manifold edges, 0 coincident verts.** Torso, pelvis, both legs, both boots,
 both arms, both hands, neck and head are one closed shell; the mane is a second closed
 shell.

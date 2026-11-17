@@ -66,8 +66,8 @@ silhouette and where the surfaces meet, not on surface detail.
 
 | | |
 |---|---|
-| ![T-pose front](images/body_front.png) | ![three-quarter](images/body_q34.png) |
-| Front, 1.72 m, T-pose, 1127 v / 2228 tris | Three-quarter view |
+| ![A-pose front](images/body_front.png) | ![three-quarter](images/body_q34.png) |
+| Front, 1.72 m, A-pose (35° arm drop + 25° wrist break), 1127 v / 2228 tris | Three-quarter view |
 | ![profile](images/body_side.png) | ![head](images/head_q34.png) |
 | Profile — silhouette and hair mass | Head: smooth skull, faceted mane, stitched neck |
 | ![hand](images/hand_q34.png) | |
@@ -89,10 +89,10 @@ silhouette and where the surfaces meet, not on surface detail.
 ## The conventions it enforces
 
 +Z up · character faces −Y · feet on Z=0 · metres · one object · one material · one
-256²–512² atlas · smooth-shaded body with faceted hair · no normal maps, PBR or shape keys ·
-one welded surface — no coincident vertices, no boundary edges on the body, no
-non-manifold edges, no n-gons · 600–1600 tris for a bare body, more once hair and
-accessories are added.
+256²–512² atlas · A-pose at rest (built T-pose, arms posed after the welds) · smooth-shaded
+body with faceted hair · no normal maps, PBR or shape keys · one welded surface — no
+coincident vertices, no boundary edges on the body, no non-manifold edges, no n-gons ·
+600–1600 tris for a bare body, more once hair and accessories are added.
 
 ## License
 

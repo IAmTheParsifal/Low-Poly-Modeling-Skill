@@ -8,6 +8,7 @@ prop. Override SHOTS if you want specific framings.
 
     import bpy
     for f in ("scripts/psx_build.py", "scripts/preview.py"): ...
+    preview.run()
 """
 import bpy
 import math
@@ -44,6 +45,10 @@ def setup(sc):
         if not ob:
             ob = bpy.data.objects.new(name, light)
             sc.collection.objects.link(ob)
+        elif ob.name not in sc.objects:
+            # the light datablock can outlive its scene link (a leaked temp scene did
+            # this once) and every render then comes out black — relink it
+            sc.collection.objects.link(ob)
         ob.location = loc
         ob.rotation_euler = (V((0, 0, 1.1)) - V(loc)).to_track_quat("-Z", "Y").to_euler()
 
@@ -52,6 +57,7 @@ def shot(sc, name, center, ortho, azim, elev=0.0, res=(560, 860)):
     cam = bpy.data.objects.get("PrevCam")
     if not cam:
         cam = bpy.data.objects.new("PrevCam", bpy.data.cameras.new("PrevCam"))
+    if cam.name not in sc.objects:
         sc.collection.objects.link(cam)
     cam.data.type = "ORTHO"
     cam.data.ortho_scale = ortho
@@ -69,9 +75,11 @@ def shot(sc, name, center, ortho, azim, elev=0.0, res=(560, 860)):
     print("shot", name)
 
 
-def auto_shots(h):
+def auto_shots(h, w):
     res = (560, 860)
-    shots = [("body_" + nm, (0, 0, h * 0.5), h * 1.10, az, 0, res)
+    # ortho_scale follows the LONGER resolution side (here: height), so fit both dims
+    ortho = 1.10 * max(h, w * res[1] / res[0])
+    shots = [("body_" + nm, (0, 0, h * 0.5), ortho, az, 0, res)
              for nm, az in (("front", 0), ("side", 90), ("back", 180), ("q34", 35))]
     shots.append(("closeup_upper", (0, 0, h * 0.86), h * 0.34, 35, 0, (520, 600)))
     shots.append(("closeup_lower", (0, 0, h * 0.16), h * 0.34, 35, 0, (520, 600)))
@@ -85,6 +93,7 @@ def run():
     ob = bpy.data.objects[OBJECT]
     bb = [ob.matrix_world @ V(c) for c in ob.bound_box]
     h = max(p.z for p in bb) - min(p.z for p in bb)
+    w = max(p.x for p in bb) - min(p.x for p in bb)
 
     clay = bpy.data.materials.get("Clay") or bpy.data.materials.new("Clay")
     clay.use_nodes = True
@@ -93,11 +102,8 @@ def run():
     bsdf.inputs["Roughness"].default_value = 0.68
     sc.view_layers[0].material_override = clay
 
-    for s in (SHOTS if SHOTS is not None else auto_shots(h)):
+    for s in (SHOTS if SHOTS is not None else auto_shots(h, w)):
         shot(sc, *s)
 
     sc.view_layers[0].material_override = None
     print("preview ->", OUT)
-
-
-run()
