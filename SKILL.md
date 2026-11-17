@@ -15,8 +15,11 @@ on silhouette and edge flow — never on surface detail.
 ## Conventions (measured from real PS1-era reference models, not guessed)
 
 - +Z up, character faces **−Y**, feet on **Z=0**, metres.
-- One object, one material, one texture atlas. The clothes *are* the mesh; there are no
-  separate garment objects.
+- One object — or, from the next character on, one object for the body and one per
+  garment — one material, one texture atlas. In the reference models the clothes *are*
+  the mesh; the next character here splits them: a complete closed body plus one closed
+  shell per garment (see the separate-mesh note under the traps). Either way there are no
+  intersecting tubes and no clothes painted onto a naked limb you never model.
 - 100% smooth shading, except hair and hard-surface props.
 - No normal maps, no PBR, no shape keys.
 - One connected surface for the body: no loose vertices, no loose edges, no zero-area
@@ -117,7 +120,9 @@ Build the body as **one welded surface** instead. Four techniques cover every jo
 2. **Cut a socket and stitch (shoulders, wrists, ankles, neck).** Write the parent's
    faces out by hand instead of calling `loft()`, skipping the quads where the limb
    attaches. That leaves an opening whose boundary is a known loop of vertex indices.
-   `bridge(b.v, socket_loop, limb_first_ring, neighbouring_face)` fills it with a band.
+   `bridge(b.v, socket_loop, limb_first_ring, neighbouring_face)` fills it with a band —
+   unless the rim's count already equals the limb's ring count, in which case use
+   technique 4 instead and skip the band entirely.
 3. **Extrude a welded quad (fingers, thumbs).** Take four existing vertices — four
    corners of the palm's end ring, or one wall quad left open in the palm — and
    `extrude()` them. Adjacent digits share their side edge, so the knuckles are one
@@ -127,16 +132,19 @@ Build the body as **one welded surface** instead. Four techniques cover every jo
 
 Two numbers decide whether a stitched joint looks professional:
 
-- **Cut the socket so it matches the limb's cross-section.** A rectangular socket cut
-  from a 12-around grid puts four of its eight verts at the top and four at the bottom,
-  clustered in angle; the stitching band then has nothing to fan evenly between and
-  twists into spikes or a dark pocket. Two quads wide (~90–95 mm on a 1.7 m figure) by
-  one ring band is the width that behaves. Three quads looked worse, not better.
-- **Size the limb's first ring to the socket, not to the limb.** Make it the same
-  ellipse as the opening (e.g. 94 × 38 mm), then swell to the real deltoid one or two
-  rings later. A full-size circular ring stitched into a shallow slot has to fan 30 mm in
-  every direction and folds. Place it *at* the socket's plane: inside the parent gives a
-  pocket that holds shadow, outside gives spikes.
+- **Cut the socket to the joint's real size, and let the hole BE the limb's first ring.**
+  A shoulder is as tall as the deltoid: a 2×2 quad cut (two columns × two ring bands,
+  ~110 mm tall on a 1.8 m figure) leaves an 8-vert rim, exactly the arm's ring count, so
+  technique 4 applies — copy the rim's coordinates as ring 0 and weld. No band, no fan, no
+  shelf. A one-band (40 mm) slot forces a small first ring and a deltoid that swells
+  afterwards, and the deltoid's top then has to land level with the parent's shelf: that is
+  the shoulder-pad step, and it took a second character to get rid of it.
+- **Where the socket cannot be sized to the joint** (a wrist, an ankle), the older rule
+  holds: two quads wide, the limb's ring at the socket plane, a small ring that swells one
+  or two rings later. Three quads wide was worse, never better.
+- **A 2×2 cut orphans the vert at the hole's centre** — it belonged to all four deleted
+  quads. Delete loose verts in the tidy *before* `remove_doubles`, or the gate fails on two
+  loose verts and the socket weld still looks fine.
 
 ## Workflow
 
@@ -202,7 +210,11 @@ one part that should be allowed to be asymmetric — an identical mirror looks l
 6. **Hair: don't cut the face slot out of the shell.** For each row, columns inside the
    slot get a radial scale around 0.45 plus a small +Y push, ramping to full radius
    roughly 10° past the slot half-angle (26–34° by row). A 30° ramp puts hair over the
-   whole face; shrink without the push leaves a pale inner wall beside the cheek.
+   whole face; shrink without the push leaves a pale inner wall beside the cheek. **This
+   only works on a thick mane.** At ~20 mm of short hair the quad that crosses from a
+   sunk column to the frame column lies in front of the cheek and reads as a dark slab
+   across the cheekbone; fold the slot columns straight back into the head instead (spread
+   across the slot in x, `y = centre + 18 mm`) so the hairline is the column at the rim.
 7. **Never alternate a fringe hem by column parity.** `j % 2` on an even column count
    puts a tooth notch dead centre. Use a smooth function of the column angle.
 8. **A single-apex pyramid is not a nose.** Read as a thin sliver from the front. Use a
@@ -263,6 +275,29 @@ one part that should be allowed to be asymmetric — an identical mirror looks l
 22. **Workbench shadow acne looks like z-fighting.** A dotted line under a belt overhang
     read as coplanar faces; the vertices were 8–11 mm apart. Check the numbers before
     moving geometry.
+23. **A 2×2 socket cut orphans the vert at the hole's centre.** It belonged to all four
+    deleted quads, so it survives with no faces and the gate fails on two loose verts (one
+    per side) while the socket weld itself looks perfect. Delete loose verts in the tidy
+    *before* `remove_doubles`.
+24. **Garments are radius steps in the same surface.** A tee hem, a jacket hem and a
+    trouser cuff are 10–15 mm outward jumps between two rings 10–20 mm apart, plus one
+    ring turning back in at the very bottom so the edge drapes instead of ending as a
+    cut-off pipe. A raised zip bead (a 4-vert loft down the front, flat-shaded) is what
+    makes a closed jacket read as a jacket rather than a vest. A hard part inside a
+    garment — a sole and welt — can be a second loft that *shares* its boundary ring: the
+    tidy welds the duplicate and the flat-shaded band reads as leather.
+
+**Separate body and clothing meshes.** The current characters carry the clothes *in* the
+body surface, which is why their sleeves, hems and trouser legs are radius steps and why
+the jacket cannot be removed. That was the right call while the weld doctrine was being
+figured out (one surface means one set of seams to get right) and the wrong call going
+forward: the next character should keep **a complete closed body underneath and each
+garment as its own closed shell**, offset 4–8 mm from the skin, so clothes can be swapped,
+hidden or weighted separately, and so a hem or a lapel can be opened without re-modelling
+the torso. Keep the welds *within* each garment (a sleeve is welded to its jacket, a
+trouser leg to its waist) and keep the body welded to itself; the two sets never share a
+vertex. Budget for it: sleeves and legs then exist twice, so a 2400-tri character becomes
+~3000 under this scheme — and the body can be blocked coarser because it is mostly hidden.
 
 ## Review pass
 
@@ -286,6 +321,13 @@ edges, 0 non-manifold edges, 0 coincident verts.** Torso, pelvis, both legs, bot
 both arms, both hands, neck and head are one closed shell; the mane is a second closed
 shell. The skull is 12 columns (a pair at ±22.5° for the eyes, brow ring ahead of the eye
 ring) so painted features have form; the neck bridge is 12↔12.
+
+The second character — a 1.81 m male in a leather jacket, tee, bootcut jeans and slim
+boots — reused the same library and settled the shoulder question: **1202 verts / 1285
+faces / 2372 tris**, same gate, all zero. Its shoulder is a 2×2 socket cut whose eight rim
+verts *are* the arm's first ring (no stitch band), its short hair folds the slot columns
+back into the skull instead of sinking them, and its clothes are still part of the surface —
+the next one should not be (see the separate-mesh note in the traps).
 
 What the welding pass changed, in the order it was done:
 

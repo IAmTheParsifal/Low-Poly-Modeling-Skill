@@ -8,6 +8,43 @@ Everything under "the character" describes the 1.72 m gothic girl the skill was 
 on, which is also the skill's test case: a lesson only goes in `SKILL.md` after it survived
 a build and a render pass on her.
 
+## 2026-11-18 — Second character: male, and a shoulder that finally works
+
+### Added
+
+- **A second character built with the skill** (the real test of whether the lessons
+  generalise): 1.81 m male, A-pose, leather jacket with a zip bead and cuffs over a tee,
+  bootcut jeans, slim classic boots, short sloppy hair. **1202 v / 2372 tris**, gate clean.
+- **The reference shoulder, copied properly.** The v2 basemesh dumps (`tools/v2_*.obj`)
+  show an arm root as tall as the deltoid (~110 mm) welded into the torso's side. The
+  socket is now a 2×2 quad cut whose eight rim verts *are* the arm's ring 0: no stitch
+  band, no shelf, no shoulder pad. Two rounds of the previous approach (a 40 mm slot plus a
+  swelling deltoid) could not get there.
+- Trap 23: a 2×2 cut orphans the vert at the hole's centre — delete loose verts in the tidy
+  before `remove_doubles`.
+- Trap 24: garment edges are radius steps in one surface (tee hem, jacket hem, trouser
+  cuff, zip bead), and a hard part like a sole can be a second loft that shares its
+  boundary ring.
+- **The decision to split body and clothing meshes** for the next character, with the
+  budget and gate consequences written down.
+
+### Changed
+
+- `preview.py` takes `(name, mat, out, h, hand)`, so one harness renders any build; the
+  hair is now marked by its material slot instead of flat shading + height.
+- The socket doctrine in `SKILL.md`: "two quads wide by one band" was the old rule. A
+  shoulder is now "as tall as the joint, and the hole's rim *is* the limb's first ring"; the
+  old rule survives only where a socket cannot be sized to the joint.
+- Boots: 72 mm ankle (was 90), 18 mm flat-shaded sole and welt, shaft top hidden up inside
+  the trouser, pointed toe. Jeans flare from a 136 mm knee to a 190 mm hem.
+
+### Fixed
+
+- Short hair no longer draws a dark slab across the cheekbone: the face-slot columns fold
+  straight back into the skull instead of sinking radially. The thick-mane trick does not
+  survive 20 mm of hair.
+- Two loose verts at the socket centres — caught by the gate, invisible in every render.
+
 ## 2026-11-18 — Geometry correction
 
 ### Added

@@ -74,13 +74,28 @@ silhouette and where the surfaces meet, not on surface detail.
 | ![hand](images/hand_q34.png) | |
 | Welded hand: 4 fingers of 3 segments extruded off the knuckle ring, thumb out of the palm's own wall quad | |
 
+The second character exists to test whether the lessons generalise: a 1.81 m male, leather
+jacket over a tee, bootcut jeans, slim classic boots, short sloppy hair. 1202 v / 2372 tris,
+same gate, all zero.
+
+| | |
+|---|---|
+| ![male front](images/male_front.png) | ![male three-quarter](images/male_q34.png) |
+| Front: jacket hem and zip are radius steps in the torso, jeans flare from the knee | Three-quarter: the shoulder is the socket rim, not a stitch band |
+| ![boot](images/male_boot.png) | |
+| Slim boot: 18 mm sole and welt (flat-shaded, sharing a ring with the upper), 72 mm ankle, pointed toe | |
+
 ## Future plans
 
+- **Separate body and clothing meshes** — the next structural change, ahead of texturing.
+  Both characters carry the clothes *in* the body surface. From here on the body stays a
+  complete closed shell and each garment is its own closed shell, 4–8 mm off the skin, so
+  clothes can be swapped, hidden or exported on their own, and a hem or lapel can actually
+  open. Welds stay *within* each shell; the numeric gate is then run per object.
 - **Animating** — a skeleton on the welded surface: shoulders, hips and wrists now share
   edges with the torso, which is what makes that possible without tearing.
 - **Texturing** — one 256²/512² atlas: painted face over the modelled sockets, dark
-  inner-hair region so the mane's facets read as depth, and the clothes as paint over the
-  same mesh.
+  inner-hair region so the mane's facets read as depth, one island per garment.
 - **UV map correction** — replace the `smart_project` placeholder with a real layout: one
   island per stitched band, no overlapping shells, seams placed where the texture hides
   them.
@@ -89,9 +104,9 @@ silhouette and where the surfaces meet, not on surface detail.
 
 +Z up · character faces −Y · feet on Z=0 · metres · one object · one material · one
 256²–512² atlas · A-pose at rest (built T-pose, arms posed after the welds) · smooth-shaded
-body with faceted hair · no normal maps, PBR or shape keys · one welded surface — no
-coincident vertices, no boundary edges on the body, no non-manifold edges, no n-gons ·
-600–1600 tris for a bare body, more once hair and accessories are added.
+body with faceted hair · no normal maps, PBR or shape keys · one welded surface per mesh —
+no coincident vertices, no boundary edges, no non-manifold edges, no n-gons · 600–1600 tris
+for a bare body, more once hair, clothes and accessories are added.
 
 ## Changelog
 
