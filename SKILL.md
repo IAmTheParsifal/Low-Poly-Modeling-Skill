@@ -243,6 +243,26 @@ one part that should be allowed to be asymmetric — an identical mirror looks l
     no lights, no camera — and a render pass came out black. Tear temp scenes down in a
     `finally` at the call site, no global `orphans_purge`, and check the live scene's
     object list afterwards.
+19. **Check that a socket cut matches the table it indexes.** The comment said the slot was
+    cut from the armpit band (rings 8–9); the code cut band 9 — the one above it — so the
+    arm was stitched into the shoulder shelf. Every render showed a valley with a flap and
+    two rounds of re-depthing the deltoid changed nothing. When a junction looks wrong,
+    print the rim vertices and compare their z with the limb's first ring *before* tuning
+    the limb.
+20. **Faces are structural, not optional.** A blank face still needs vertices where the
+    eyes go: 8 columns give a centre line and ±45° (the cheek), so a socket has nowhere to
+    be. 12 columns with a pair at ±22.5°, a brow ring set ahead of the eye ring, and ±2 mm
+    socket/cheek offsets carry painted features. Keep offsets small — 3.5 mm on top of a
+    10 mm ring step turned the brow into a shelf, because on a 12-column face a 4 mm offset
+    over a 20 mm gap already folds. All five references are 100% smooth-flagged yet render
+    faceted: their FBX carries baked split normals, so flags don't prove flat shading — and
+    don't flat-shade a skull to fake structure the texture should paint.
+21. **Mark hair by its flat shading, not by "the last N faces".** A join plus a tidy pass
+    reorders polygons; a stored face count drifts and a "dark hair" render pass recolours
+    scattered faces across the whole body. Faceted geometry above the waist is the hair.
+22. **Workbench shadow acne looks like z-fighting.** A dotted line under a belt overhang
+    read as coplanar faces; the vertices were 8–11 mm apart. Check the numbers before
+    moving geometry.
 
 ## Review pass
 
