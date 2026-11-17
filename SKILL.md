@@ -24,7 +24,7 @@ on silhouette and edge flow — never on surface detail.
   where a shape needs them (joint bands, tips).
 - A T-pose body at rest, so the joints can be welded cleanly and a rig has room.
 
-Budgets from five shipped reference models:
+Budgets from five reference models:
 
 | model | verts | tris | notes |
 |---|---|---|---|
@@ -43,7 +43,7 @@ The two `*_version_2` base meshes are also the useful counter-example: 880 tris 
 pentagons and 8–14 coincident vertices; the female has 4 loose verts marking the eyes. Each
 hand — 82 verts, 18 % of the mesh — is a separate shell overlapping the wrist under rigid
 weights, i.e. a visible cuff, while its head, arms and legs are one welded 283-vert
-surface. The bar shipped work clears is lower than the gate this skill enforces: weld what
+surface. The bar these assets clear is lower than the gate this skill enforces: weld what
 deforms, let a cuff hide what does not. (Digits there are 3 chains per hand — thumb, index,
 one fused middle/ring/pinky — because that is what 880 tris buys.)
 
