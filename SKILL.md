@@ -24,17 +24,28 @@ on silhouette and edge flow — never on surface detail.
   where a shape needs them (joint bands, tips).
 - A T-pose body at rest, so the joints can be welded cleanly and a rig has room.
 
-Budgets from three shipped reference models:
+Budgets from five shipped reference models:
 
 | model | verts | tris | notes |
 |---|---|---|---|
 | rigged male basemesh | 772 | 1540 | 84 bones, 256² atlas, A-pose, 1.98 m |
 | Walking (PSXProp) | 349 | 645 | all tris, 512² atlas, T-pose, 1.77 m |
 | LE0GAR | 548 | 943 | 9 objects, one 256² atlas, Rigify, 2.4 m |
+| PSX_Char_Male_Base v2 | 447 | 880 | 47-bone UE4 rig, untextured, A-pose, 1.82 m |
+| Retro_Char_Base_Female v2 | 451 | 880 | same rig and budget, A-pose, 1.71 m |
 
 That is a rigged **bare body**. Hair volume and accessories legitimately push past it — a
 1100 v / 2200 tri character with a full mane, belt and boots is still a PS1 character.
 Never cut silhouette to hit a number derived from a bare body.
+
+The two `*_version_2` base meshes are also the useful counter-example: 880 tris each on a
+47-bone rig, and **not clean**. They carry 6 boundary edges, 2 non-manifold edges, 2
+pentagons and 8–14 coincident vertices; the female has 4 loose verts marking the eyes. Each
+hand — 82 verts, 18 % of the mesh — is a separate shell overlapping the wrist under rigid
+weights, i.e. a visible cuff, while its head, arms and legs are one welded 283-vert
+surface. The bar shipped work clears is lower than the gate this skill enforces: weld what
+deforms, let a cuff hide what does not. (Digits there are 3 chains per hand — thumb, index,
+one fused middle/ring/pinky — because that is what 880 tris buys.)
 
 ## Setup
 

@@ -11,7 +11,7 @@ The body doctrine is **one welded surface**: limbs grow out of the torso through
 sockets and shared rings, not pushed into it and hidden under a garment. Butted shells are
 a blockout stage, not a result — they show a seam in close-up and tear when rigged.
 
-Built from a study of three real PS1-era reference models and one finished character.
+Built from a study of five real PS1-era reference models and one finished character.
 
 ## What's here
 
