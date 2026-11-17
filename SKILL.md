@@ -281,10 +281,11 @@ material, UVs inside 0–1, object transform identity.
 
 A 1.72 m gothic girl, mesh only, built and welded with this library in T-pose, then posed
 to A-pose (35° arm drop, 25° wrist break) after the last weld:
-**1127 verts / 1223 faces / 2228 tris — 1005 quads, 218 tris, 0 n-gons, 0 boundary
+**1167 verts / 1267 faces / 2308 tris — 1041 quads, 226 tris, 0 n-gons, 0 boundary
 edges, 0 non-manifold edges, 0 coincident verts.** Torso, pelvis, both legs, both boots,
 both arms, both hands, neck and head are one closed shell; the mane is a second closed
-shell.
+shell. The skull is 12 columns (a pair at ±22.5° for the eyes, brow ring ahead of the eye
+ring) so painted features have form; the neck bridge is 12↔12.
 
 What the welding pass changed, in the order it was done:
 

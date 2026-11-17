@@ -26,6 +26,7 @@ character.
 | `examples/minimal_character.py` | ~60 line end-to-end blockout |
 | `tests/smoke_weld.py` | exercises `bridge()` + `extrude()` and asserts 0 boundary edges (run inside Blender) |
 | `tests/test_measure_stub.py` | runs the measuring tool against a synthetic image, no Blender needed |
+| `CHANGELOG.md` | dated record of what changed in the skill and in the character it was written on |
 
 ## Install
 
@@ -91,6 +92,11 @@ silhouette and where the surfaces meet, not on surface detail.
 body with faceted hair · no normal maps, PBR or shape keys · one welded surface — no
 coincident vertices, no boundary edges on the body, no non-manifold edges, no n-gons ·
 600–1600 tris for a bare body, more once hair and accessories are added.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) — dated entries for each pass, including what broke and
+what the fix cost.
 
 ## License
 
